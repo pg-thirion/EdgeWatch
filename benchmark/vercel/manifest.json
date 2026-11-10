@@ -1,0 +1,42 @@
+[
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-event-sheet-dark.png",
+    "path": "benchmark/vercel\\vercel_firewall_1_vercel-waf-event-sheet-dark.png",
+    "size": 78261
+  },
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-event-sheet-light.png",
+    "path": "benchmark/vercel\\vercel_firewall_2_vercel-waf-event-sheet-light.png",
+    "size": 82194
+  },
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-overview-tab-dark.png",
+    "path": "benchmark/vercel\\vercel_firewall_3_vercel-waf-overview-tab-dark.png",
+    "size": 249967
+  },
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-overview-tab-light.png",
+    "path": "benchmark/vercel\\vercel_firewall_4_vercel-waf-overview-tab-light.png",
+    "size": 257563
+  },
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-traffic-tab-dark.png",
+    "path": "benchmark/vercel\\vercel_firewall_5_vercel-waf-traffic-tab-dark.png",
+    "size": 146392
+  },
+  {
+    "url": "https://7nyt0uhk7sse4zvn.public.blob.vercel-storage.com/docs-assets/static/docs/security/vercel-waf-traffic-tab-light.png",
+    "path": "benchmark/vercel\\vercel_firewall_6_vercel-waf-traffic-tab-light.png",
+    "size": 145738
+  },
+  {
+    "url": "https://assets.vercel.com/image/upload/q_auto/front/favicon/vercel/32x32.png",
+    "path": "benchmark/vercel\\vercel_firewall_7_32x32.png",
+    "size": 602
+  },
+  {
+    "url": "https://assets.vercel.com/image/upload/q_auto/front/favicon/vercel/apple-touch-icon-180x180.png",
+    "path": "benchmark/vercel\\vercel_firewall_8_apple-touch-icon-180x180.png",
+    "size": 534
+  }
+]

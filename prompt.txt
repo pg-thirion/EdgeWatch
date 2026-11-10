@@ -1,0 +1,9 @@
+Build EdgeWatch, a webapp connecting Cloudflare accounts into one dashboard across multiple zones. Include recent WAF events and blocked requests, an interactive threat-origin world map, detection of request spikes and repeated challenge failures, IP investigation with historical activity and rule matches, incident timelines, downloadable reports, and realistic demo attacks.
+
+Make the central workflow complete: select suspicious activity, inspect evidence, propose a WAF rule, preview its estimated effects, and apply it only after explicit approval. Verify Cloudflare APIs and plan limits against official documentation. Label sampled data and preview uncertainty; protect account credentials.
+
+The bar is Vercel Firewall’s published dashboard screenshots: https://vercel.com/docs/vercel-firewall/firewall-observability. Fetch the actual images first and compare equivalent views directly. Require the full demo investigation workflow to pass browser tests, including proving that preview cannot apply rules.
+
+Split the work into small, independently judgeable pieces. Assign each a builder and a separate harsh critic with fresh context. The critic inspects working output, compares screenshots blind with labels stripped, picks the better result, and names the biggest remaining gap. Send that gap back to the builder.
+
+Keep looping until ours wins. Maintain a live progress page. Run independent builders and critics as parallel subagents.

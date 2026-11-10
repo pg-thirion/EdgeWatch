@@ -1,0 +1,12 @@
+{
+  "piece_name": "eventsheet",
+  "round": 1,
+  "timestamp": 1794291246.472099,
+  "option_A": "EDGEWATCH_CANDIDATE",
+  "option_B": "REFERENCE_BENCHMARK",
+  "combined_path": "benchmark/critic_rounds\\eventsheet_round_1_blind_combined.png",
+  "option_A_path": "benchmark/critic_rounds\\eventsheet_round_1_option_A.png",
+  "option_B_path": "benchmark/critic_rounds\\eventsheet_round_1_option_B.png",
+  "edgewatch_path": "benchmark/edgewatch_captures/edgewatch_eventsheet.png",
+  "reference_path": "benchmark/vercel\\vercel_firewall_1_vercel-waf-event-sheet-dark.png"
+}

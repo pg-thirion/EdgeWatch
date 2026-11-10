@@ -1,0 +1,12 @@
+{
+  "piece_name": "overview",
+  "round": 1,
+  "timestamp": 1794291246.1040297,
+  "option_A": "REFERENCE_BENCHMARK",
+  "option_B": "EDGEWATCH_CANDIDATE",
+  "combined_path": "benchmark/critic_rounds\\overview_round_1_blind_combined.png",
+  "option_A_path": "benchmark/critic_rounds\\overview_round_1_option_A.png",
+  "option_B_path": "benchmark/critic_rounds\\overview_round_1_option_B.png",
+  "edgewatch_path": "benchmark/edgewatch_captures/edgewatch_overview.png",
+  "reference_path": "benchmark/vercel\\vercel_firewall_3_vercel-waf-overview-tab-dark.png"
+}

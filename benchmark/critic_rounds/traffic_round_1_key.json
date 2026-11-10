@@ -1,0 +1,12 @@
+{
+  "piece_name": "traffic",
+  "round": 1,
+  "timestamp": 1794291246.2870557,
+  "option_A": "REFERENCE_BENCHMARK",
+  "option_B": "EDGEWATCH_CANDIDATE",
+  "combined_path": "benchmark/critic_rounds\\traffic_round_1_blind_combined.png",
+  "option_A_path": "benchmark/critic_rounds\\traffic_round_1_option_A.png",
+  "option_B_path": "benchmark/critic_rounds\\traffic_round_1_option_B.png",
+  "edgewatch_path": "benchmark/edgewatch_captures/edgewatch_traffic.png",
+  "reference_path": "benchmark/vercel\\vercel_firewall_5_vercel-waf-traffic-tab-dark.png"
+}
