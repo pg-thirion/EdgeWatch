@@ -2,12 +2,8 @@ import React, { useState } from 'react';
 import {
   X,
   Zap,
-  ShieldAlert,
-  Play,
   RotateCcw,
   CheckCircle2,
-  Server,
-  Crosshair,
 } from 'lucide-react';
 import { DemoAttackScenario, CloudflareZone } from '../types/security';
 import { DEMO_SCENARIOS } from '../data/mockCloudflareData';

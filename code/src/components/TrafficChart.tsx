@@ -20,7 +20,6 @@ export const TrafficChart: React.FC<TrafficChartProps> = ({
 
   // Maximum value for scaling Y-axis
   const maxVal = Math.max(10, ...data.map((d) => d.total));
-  const chartHeight = 220;
 
   return (
     <div className="bg-[#121215] border border-[#27272f] rounded-xl p-5 select-none">
@@ -105,11 +104,12 @@ export const TrafficChart: React.FC<TrafficChartProps> = ({
         {/* Stacked Bars */}
         <div className="relative w-full h-full flex items-end justify-between gap-1.5 z-10 px-2">
           {data.map((point, idx) => {
-            const allowedH = (point.allowed / maxVal) * chartHeight;
-            const deniedH = (point.denied / maxVal) * chartHeight;
-            const challengedH = (point.challenged / maxVal) * chartHeight;
-            const loggedH = (point.logged / maxVal) * chartHeight;
-            const rateLimitedH = (point.rateLimited / maxVal) * chartHeight;
+            const total = Math.max(1, point.total);
+            const allowedPct = (point.allowed / total) * 100;
+            const deniedPct = (point.denied / total) * 100;
+            const challengedPct = (point.challenged / total) * 100;
+            const loggedPct = (point.logged / total) * 100;
+            const rateLimitedPct = (point.rateLimited / total) * 100;
 
             const isHovered = hoveredIndex === idx;
 
@@ -138,30 +138,30 @@ export const TrafficChart: React.FC<TrafficChartProps> = ({
 
                 {/* Stacked column */}
                 <div
-                  className={`w-full max-w-[24px] rounded-t flex flex-col justify-end transition-all ${
+                  className={`w-full max-w-[24px] rounded-t flex flex-col justify-end overflow-hidden transition-all ${
                     isHovered ? 'ring-1 ring-white/60 brightness-125' : 'hover:brightness-110'
                   }`}
-                  style={{ height: `${(point.total / maxVal) * 100}%` }}
+                  style={{ height: `${Math.min(100, Math.max(2, (point.total / maxVal) * 100))}%` }}
                 >
                   {/* Rate limited segment */}
-                  {rateLimitedH > 0 && (
-                    <div style={{ height: `${rateLimitedH}px` }} className="bg-purple-500 w-full rounded-t-sm" />
+                  {rateLimitedPct > 0 && (
+                    <div style={{ height: `${rateLimitedPct}%` }} className="bg-purple-500 w-full" />
                   )}
                   {/* Denied segment */}
-                  {deniedH > 0 && (
-                    <div style={{ height: `${deniedH}px` }} className="bg-red-500 w-full" />
+                  {deniedPct > 0 && (
+                    <div style={{ height: `${deniedPct}%` }} className="bg-red-500 w-full" />
                   )}
                   {/* Challenged segment */}
-                  {challengedH > 0 && (
-                    <div style={{ height: `${challengedH}px` }} className="bg-amber-500 w-full" />
+                  {challengedPct > 0 && (
+                    <div style={{ height: `${challengedPct}%` }} className="bg-amber-500 w-full" />
                   )}
                   {/* Logged segment */}
-                  {loggedH > 0 && (
-                    <div style={{ height: `${loggedH}px` }} className="bg-blue-500 w-full" />
+                  {loggedPct > 0 && (
+                    <div style={{ height: `${loggedPct}%` }} className="bg-blue-500 w-full" />
                   )}
                   {/* Allowed segment */}
-                  {allowedH > 0 && (
-                    <div style={{ height: `${allowedH}px` }} className="bg-emerald-500 w-full" />
+                  {allowedPct > 0 && (
+                    <div style={{ height: `${allowedPct}%` }} className="bg-emerald-500 w-full" />
                   )}
                 </div>
               </div>

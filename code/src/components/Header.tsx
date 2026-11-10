@@ -1,13 +1,10 @@
 import React from 'react';
 import {
   Shield,
-  Layers,
   Zap,
   Download,
   Key,
-  Activity,
   Play,
-  Pause,
   ChevronDown,
 } from 'lucide-react';
 import { CloudflareAccount, CloudflareZone } from '../types/security';
@@ -96,6 +93,11 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {selectedZone.plan}
               </span>
+              {activeAccount && (
+                <span className="text-[11px] text-zinc-500 font-mono hidden xl:inline">
+                  ({activeAccount.name})
+                </span>
+              )}
             </div>
           </div>
 

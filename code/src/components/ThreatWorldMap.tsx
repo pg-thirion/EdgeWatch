@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, ShieldAlert, Crosshair } from 'lucide-react';
+import { Globe, ShieldAlert } from 'lucide-react';
 import { WafEvent } from '../types/security';
 
 interface ThreatWorldMapProps {
@@ -29,36 +29,61 @@ export const ThreatWorldMap: React.FC<ThreatWorldMapProps> = ({
   const countryCoords: Record<string, { x: number; y: number; name: string }> = {
     US: { x: 23, y: 38, name: 'United States' },
     CA: { x: 24, y: 25, name: 'Canada' },
+    MX: { x: 20, y: 48, name: 'Mexico' },
     BR: { x: 35, y: 68, name: 'Brazil' },
+    AR: { x: 32, y: 80, name: 'Argentina' },
     GB: { x: 48, y: 30, name: 'United Kingdom' },
     DE: { x: 52, y: 30, name: 'Germany' },
     FR: { x: 49, y: 33, name: 'France' },
     NL: { x: 50.5, y: 29, name: 'Netherlands' },
+    ES: { x: 47, y: 37, name: 'Spain' },
+    IT: { x: 53, y: 36, name: 'Italy' },
+    PL: { x: 55, y: 29, name: 'Poland' },
+    UA: { x: 59, y: 29, name: 'Ukraine' },
+    SE: { x: 53, y: 22, name: 'Sweden' },
+    CH: { x: 51, y: 33, name: 'Switzerland' },
     RU: { x: 70, y: 24, name: 'Russian Federation' },
+    TR: { x: 58, y: 38, name: 'Turkey' },
+    IL: { x: 60, y: 42, name: 'Israel' },
+    ZA: { x: 55, y: 78, name: 'South Africa' },
+    NG: { x: 49, y: 52, name: 'Nigeria' },
     CN: { x: 78, y: 42, name: 'China' },
     JP: { x: 88, y: 40, name: 'Japan' },
+    KR: { x: 84, y: 39, name: 'South Korea' },
     IN: { x: 70, y: 48, name: 'India' },
+    SG: { x: 77, y: 57, name: 'Singapore' },
+    ID: { x: 81, y: 62, name: 'Indonesia' },
     AU: { x: 86, y: 75, name: 'Australia' },
     IE: { x: 46.5, y: 29.5, name: 'Ireland' },
   };
 
   // Aggregate stats per country from events
-  const countryStats: Record<string, { requests: number; blocked: number; challenged: number }> = {};
+  const countryStats: Record<string, { requests: number; blocked: number; challenged: number; name: string }> = {};
   events.forEach((evt) => {
     const c = evt.clientCountry.toUpperCase();
     if (!countryStats[c]) {
-      countryStats[c] = { requests: 0, blocked: 0, challenged: 0 };
+      countryStats[c] = {
+        requests: 0,
+        blocked: 0,
+        challenged: 0,
+        name: evt.clientCountryName || c,
+      };
     }
     countryStats[c].requests += 1;
     if (evt.action === 'block') countryStats[c].blocked += 1;
     if (evt.action === 'challenge' || evt.action === 'managed_challenge') countryStats[c].challenged += 1;
   });
 
-  const markers: CountryMarker[] = Object.entries(countryCoords).map(([code, coords]) => {
-    const stats = countryStats[code] || { requests: 0, blocked: 0, challenged: 0 };
+  const markers: CountryMarker[] = Object.entries(countryStats).map(([code, stats]) => {
+    const coords = countryCoords[code] || {
+      // Deterministic fallback coordinates for any unmapped country
+      x: 30 + ((code.charCodeAt(0) * 17) % 55),
+      y: 25 + ((code.charCodeAt(1) * 23) % 50),
+      name: stats.name,
+    };
     return {
       code,
-      name: coords.name,
+      name: coords.name || stats.name,
       x: coords.x,
       y: coords.y,
       requests: stats.requests,
@@ -67,8 +92,11 @@ export const ThreatWorldMap: React.FC<ThreatWorldMapProps> = ({
     };
   });
 
-  // Calculate top attack origin
-  const topThreatOrigin = [...markers].sort((a, b) => (b.blocked + b.challenged) - (a.blocked + a.challenged))[0];
+  // Calculate top attack origin - only consider actual attacks
+  const attackOrigins = markers.filter((m) => m.blocked + m.challenged > 0);
+  const topThreatOrigin = attackOrigins.length > 0
+    ? [...attackOrigins].sort((a, b) => (b.blocked + b.challenged) - (a.blocked + a.challenged))[0]
+    : null;
 
   return (
     <div className="bg-[#121215] border border-[#27272f] rounded-xl p-5 relative overflow-hidden">
@@ -178,8 +206,8 @@ export const ThreatWorldMap: React.FC<ThreatWorldMapProps> = ({
           <line x1="500" y1="0" x2="500" y2="500" stroke="#2a2a38" strokeWidth="1" strokeDasharray="4,4" />
         </svg>
 
-        {/* Interactive Threat Markers */}
-        {markers.map((m) => {
+        {/* Interactive Threat Markers - only render countries with activity */}
+        {markers.filter((m) => m.requests > 0).map((m) => {
           const hasAttacks = m.blocked > 0 || m.challenged > 0;
           const isSelected = selectedCountry === m.code;
           const size = Math.min(24, Math.max(10, Math.sqrt(m.requests + 1) * 3));
@@ -267,7 +295,7 @@ export const ThreatWorldMap: React.FC<ThreatWorldMapProps> = ({
         <div className="absolute bottom-3 left-3 bg-[#121215]/90 backdrop-blur-sm border border-zinc-800/80 rounded px-2.5 py-1.5 text-[11px] text-zinc-400 flex items-center gap-2">
           <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
           <span>
-            Primary Threat Hotspot: <strong className="text-zinc-200">{topThreatOrigin ? `${topThreatOrigin.name} (${topThreatOrigin.code})` : 'None'}</strong>
+            Primary Threat Hotspot: <strong className="text-zinc-200">{topThreatOrigin ? `${topThreatOrigin.name} (${topThreatOrigin.code})` : 'None Detected (Traffic Clean)'}</strong>
           </span>
         </div>
       </div>

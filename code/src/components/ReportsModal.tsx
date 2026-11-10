@@ -5,10 +5,6 @@ import {
   Download,
   Printer,
   Shield,
-  Layers,
-  CheckCircle2,
-  Calendar,
-  AlertTriangle,
 } from 'lucide-react';
 import { WafEvent, WafRule, CloudflareZone, SpikeAnomaly, IncidentTimelineEvent } from '../types/security';
 
@@ -30,6 +26,8 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
   onClose,
 }) => {
   const [reportType, setReportType] = useState<'executive' | 'csv' | 'json'>('executive');
+  const [reportDate] = useState(() => new Date().toLocaleDateString());
+  const [reportId] = useState(() => `EW-SEC-${Math.random().toString(16).slice(-6).toUpperCase()}`);
 
   const exportCSV = () => {
     const headers = [
@@ -47,24 +45,31 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
       'RuleMatched',
     ];
 
+    const sanitizeCsvField = (raw: string | number | undefined | null) => {
+      const str = String(raw ?? '');
+      // Neutralize CSV formula injection (=, +, -, @, \t, \r)
+      const sanitized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+      return `"${sanitized.replace(/"/g, '""')}"`;
+    };
+
     const rows = events.map((e) => [
-      e.id,
-      e.timestamp,
-      e.zoneName,
-      e.action,
-      e.clientIP,
-      e.clientCountry,
-      e.clientAsn,
-      e.clientRequestHTTPMethod,
-      `"${e.clientRequestPath.replace(/"/g, '""')}"`,
+      sanitizeCsvField(e.id),
+      sanitizeCsvField(e.timestamp),
+      sanitizeCsvField(e.zoneName),
+      sanitizeCsvField(e.action),
+      sanitizeCsvField(e.clientIP),
+      sanitizeCsvField(e.clientCountry),
+      sanitizeCsvField(e.clientAsn),
+      sanitizeCsvField(e.clientRequestHTTPMethod),
+      sanitizeCsvField(e.clientRequestPath),
       e.threatScore,
       e.sampleInterval,
-      `"${(e.ruleName || '').replace(/"/g, '""')}"`,
+      sanitizeCsvField(e.ruleName || ''),
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent([headers.join(','), ...rows.map((r) => r.join(','))].join('\n'));
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', encodeURI(csvContent));
+    downloadAnchor.setAttribute('href', csvContent);
     downloadAnchor.setAttribute('download', `edgewatch_security_events_${Date.now()}.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
@@ -209,9 +214,9 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
                   </p>
                 </div>
                 <div className="text-right text-xs text-zinc-400 space-y-1">
-                  <div>Date: <strong className="text-zinc-200">{new Date().toLocaleDateString()}</strong></div>
+                  <div>Date: <strong className="text-zinc-200">{reportDate}</strong></div>
                   <div>Audit Period: <strong className="text-zinc-200">Last 24 Hours</strong></div>
-                  <div>Report ID: <span className="font-mono text-zinc-300">EW-SEC-{Date.now().toString().slice(-6)}</span></div>
+                  <div>Report ID: <span className="font-mono text-zinc-300">{reportId}</span></div>
                 </div>
               </div>
 

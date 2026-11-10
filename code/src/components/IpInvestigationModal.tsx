@@ -2,17 +2,11 @@ import React from 'react';
 import {
   X,
   ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
   Fingerprint,
-  Globe,
-  Clock,
   PlusCircle,
-  ExternalLink,
   Activity,
-  Layers,
 } from 'lucide-react';
-import { WafEvent, IpIntelligence } from '../types/security';
+import { WafEvent } from '../types/security';
 
 interface IpInvestigationModalProps {
   ip: string;
@@ -143,13 +137,13 @@ export const IpInvestigationModal: React.FC<IpInvestigationModalProps> = ({
               <div className="h-2.5 w-full bg-zinc-800 rounded-full overflow-hidden flex">
                 <div
                   style={{
-                    width: `${Math.max(5, (blockedCount / Math.max(1, totalRequests)) * 100)}%`,
+                    width: `${blockedCount > 0 ? Math.max(3, (blockedCount / Math.max(1, totalRequests)) * 100) : 0}%`,
                   }}
                   className="bg-red-500"
                 />
                 <div
                   style={{
-                    width: `${Math.max(5, (challengeFailures / Math.max(1, totalRequests)) * 100)}%`,
+                    width: `${challengeFailures > 0 ? Math.max(3, (challengeFailures / Math.max(1, totalRequests)) * 100) : 0}%`,
                   }}
                   className="bg-amber-500"
                 />

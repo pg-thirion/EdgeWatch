@@ -4,13 +4,13 @@ import * as path from 'path';
 
 const SCREENSHOT_DIR = path.resolve('../benchmark/edgewatch_captures');
 
-test.beforeAll(async () => {
-  if (!fs.existsSync(SCREENSHOT_DIR)) {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-  }
-});
-
 test.describe('EdgeWatch E2E Verification & Safety Suite', () => {
+  test.beforeAll(async () => {
+    if (!fs.existsSync(SCREENSHOT_DIR)) {
+      fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    }
+  });
+
   test('1. Full Investigation Workflow & Preview Safety Verification', async ({ page }) => {
     // 1. Load EdgeWatch
     await page.goto('http://127.0.0.1:5173/');

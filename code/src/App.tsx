@@ -40,12 +40,28 @@ export const App: React.FC = () => {
 
   // Active navigation & filters
   const [selectedZoneId, setSelectedZoneId] = useState<string>(INITIAL_ZONES[0].id);
-  const [activeTab, setActiveTab] = useState<'overview' | 'traffic' | 'timeline'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'traffic' | 'timeline'>(() => {
+    if (typeof window === 'undefined') return 'overview';
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'traffic' || tabParam === 'overview' || tabParam === 'timeline') {
+      return tabParam;
+    }
+    return 'overview';
+  });
   const [selectedRange, setSelectedRange] = useState<string>('24h');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   // Modals & Drawers state
-  const [inspectedEvent, setInspectedEvent] = useState<WafEvent | null>(null);
+  const [inspectedEvent, setInspectedEvent] = useState<WafEvent | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    const inspectParam = params.get('inspect');
+    if (inspectParam) {
+      return generateInitialEvents().find((e) => e.id === inspectParam) || null;
+    }
+    return null;
+  });
   const [investigatingIp, setInvestigatingIp] = useState<string | null>(null);
   const [ruleWorkflowEvent, setRuleWorkflowEvent] = useState<WafEvent | null>(null);
   const [isRuleWorkflowOpen, setIsRuleWorkflowOpen] = useState<boolean>(false);
@@ -58,20 +74,6 @@ export const App: React.FC = () => {
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
 
-  // URL query parameter synchronization (allows direct deep-linking e.g. /?tab=traffic, /?inspect=evt_1)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab');
-    if (tabParam === 'traffic' || tabParam === 'overview' || tabParam === 'timeline') {
-      setActiveTab(tabParam);
-    }
-    const inspectParam = params.get('inspect');
-    if (inspectParam) {
-      const match = events.find((e) => e.id === inspectParam) || events[0];
-      setInspectedEvent(match);
-    }
-  }, []);
-
   // Periodic simulated live edge traffic
   useEffect(() => {
     if (!isLiveStreaming) return;
@@ -82,15 +84,16 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [isLiveStreaming, selectedZone]);
 
+  const [initialBaseTime] = useState(() => Date.now());
+
   // Aggregate time-series chart data points from current events
   const trafficChartData: TrafficDataPoint[] = useMemo(() => {
     const points: TrafficDataPoint[] = [];
-    const now = Date.now();
     const intervalsCount = 14;
     const stepMs = (24 * 3600 * 1000) / intervalsCount;
 
     for (let i = intervalsCount - 1; i >= 0; i--) {
-      const time = new Date(now - i * stepMs);
+      const time = new Date(initialBaseTime - i * stepMs);
       const hours = time.getHours().toString().padStart(2, '0');
       const mins = time.getMinutes().toString().padStart(2, '0');
       const label = `${hours}:${mins}`;
@@ -103,16 +106,16 @@ export const App: React.FC = () => {
         timestamp: time.toISOString(),
         timeLabel: label,
         total: baseReq,
-        allowed: Math.round(baseReq * 0.55),
-        denied: isSpike ? Math.round(baseReq * 0.3) : Math.round(baseReq * 0.15),
-        challenged: isSpike ? Math.round(baseReq * 0.25) : Math.round(baseReq * 0.15),
+        allowed: isSpike ? Math.round(baseReq * 0.25) : Math.round(baseReq * 0.55),
+        denied: isSpike ? Math.round(baseReq * 0.35) : Math.round(baseReq * 0.15),
+        challenged: isSpike ? Math.round(baseReq * 0.22) : Math.round(baseReq * 0.15),
         logged: Math.round(baseReq * 0.08),
-        rateLimited: isSpike ? Math.round(baseReq * 0.12) : Math.round(baseReq * 0.07),
+        rateLimited: isSpike ? Math.round(baseReq * 0.10) : Math.round(baseReq * 0.07),
         isSpike,
       });
     }
     return points;
-  }, [events]);
+  }, [initialBaseTime]);
 
   // Actions
   const handleOpenProposeRule = (event?: WafEvent) => {
@@ -187,8 +190,9 @@ export const App: React.FC = () => {
   };
 
   const handleAddAccount = (name: string, token: string) => {
+    const accId = `cf_acc_${Date.now()}`;
     const newAcc: CloudflareAccount = {
-      id: `cf_acc_${Date.now()}`,
+      id: accId,
       name,
       maskedToken: `cf_tok_••••••••••••${token.slice(-4)}`,
       encryptedTokenHash: `sha256:${Math.random().toString(16).substring(2, 18)}`,
@@ -196,11 +200,30 @@ export const App: React.FC = () => {
       permissions: ['Zone.WAF:Edit', 'Zone.Analytics:Read'],
       zonesCount: 1,
     };
+    const newZone: CloudflareZone = {
+      id: `zone_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+      name: `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.example.com`,
+      accountId: accId,
+      accountName: name,
+      plan: 'pro',
+      status: 'active',
+      currentCustomRulesCount: 1,
+      rulesetId: `ruleset_${accId}`,
+      rulesetPhase: 'http_request_firewall_custom',
+    };
     setAccounts((prev) => [...prev, newAcc]);
+    setZones((prev) => [...prev, newZone]);
   };
 
   const handleDeleteAccount = (id: string) => {
     setAccounts((prev) => prev.filter((a) => a.id !== id));
+    setZones((prev) => {
+      const remaining = prev.filter((z) => z.accountId !== id);
+      if (remaining.length > 0 && !remaining.some((z) => z.id === selectedZoneId)) {
+        setSelectedZoneId(remaining[0].id);
+      }
+      return remaining;
+    });
   };
 
   return (
@@ -227,6 +250,7 @@ export const App: React.FC = () => {
             events={events}
             rules={rules}
             zones={zones}
+            selectedZoneId={selectedZoneId}
             anomalies={anomalies}
             trafficData={trafficChartData}
             selectedRange={selectedRange}

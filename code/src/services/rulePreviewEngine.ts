@@ -15,10 +15,10 @@ export function evaluateWirefilter(expression: string, event: WafEvent): boolean
   const cleanExpr = expression.toLowerCase().trim();
 
   // Tokenize by OR first, then AND
-  const orClauses = cleanExpr.split(/\sor\s/);
+  const orClauses = cleanExpr.split(/\sor\s+/);
 
   return orClauses.some((orClause) => {
-    const andClauses = orClause.replace(/[()]/g, '').split(/\sand\s/);
+    const andClauses = orClause.replace(/[()]/g, '').split(/\sand\s+/);
 
     return andClauses.every((clause) => {
       const trimmed = clause.trim();
@@ -31,8 +31,8 @@ export function evaluateWirefilter(expression: string, event: WafEvent): boolean
       }
 
       // Match path eq
-      if (trimmed.includes('http.request.uri.path eq')) {
-        const val = extractQuotedValue(trimmed);
+      if (/\bhttp\.request\.uri\.path\s+eq\b/.test(trimmed)) {
+        const val = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
         return event.clientRequestPath.toLowerCase() === val.toLowerCase();
       }
 
@@ -43,8 +43,8 @@ export function evaluateWirefilter(expression: string, event: WafEvent): boolean
       }
 
       // Match IP eq: ip.src eq 198.51.100.44
-      if (trimmed.includes('ip.src eq')) {
-        const ip = extractBareOrQuoted(trimmed.split('eq')[1]);
+      if (/\bip\.src\s+eq\b/.test(trimmed)) {
+        const ip = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
         return event.clientIP.toLowerCase() === ip.toLowerCase();
       }
 
@@ -54,10 +54,28 @@ export function evaluateWirefilter(expression: string, event: WafEvent): boolean
         return countries.includes(event.clientCountry.toLowerCase());
       }
 
+      // Match country eq: ip.geoip.country eq "ru"
+      if (/\bip\.geoip\.country\s+eq\b/.test(trimmed)) {
+        const country = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
+        return event.clientCountry.toLowerCase() === country.toLowerCase();
+      }
+
       // Match threat score gt: cf.threat_score gt 40
-      if (trimmed.includes('cf.threat_score gt')) {
-        const score = parseInt(trimmed.split('gt')[1].trim(), 10);
+      if (/\bcf\.threat_score\s+gt\b/.test(trimmed)) {
+        const score = parseInt(trimmed.split(/\s+gt\s+/)[1]?.trim() || '', 10);
         return !isNaN(score) && event.threatScore > score;
+      }
+
+      // Match threat score gte: cf.threat_score gte 40
+      if (/\bcf\.threat_score\s+gte\b/.test(trimmed)) {
+        const score = parseInt(trimmed.split(/\s+gte\s+/)[1]?.trim() || '', 10);
+        return !isNaN(score) && event.threatScore >= score;
+      }
+
+      // Match threat score lt: cf.threat_score lt 40
+      if (/\bcf\.threat_score\s+lt\b/.test(trimmed)) {
+        const score = parseInt(trimmed.split(/\s+lt\s+/)[1]?.trim() || '', 10);
+        return !isNaN(score) && event.threatScore < score;
       }
 
       // Match query contains
@@ -73,17 +91,18 @@ export function evaluateWirefilter(expression: string, event: WafEvent): boolean
       }
 
       // Match method eq
-      if (trimmed.includes('http.request.method eq')) {
-        const method = extractBareOrQuoted(trimmed.split('eq')[1]);
+      if (/\bhttp\.request\.method\s+eq\b/.test(trimmed)) {
+        const method = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
         return event.clientRequestHTTPMethod.toLowerCase() === method.toLowerCase();
       }
 
-      // Fallback substring search across key fields
-      return (
-        event.clientRequestPath.toLowerCase().includes(trimmed) ||
-        event.clientIP.toLowerCase().includes(trimmed) ||
-        event.userAgent.toLowerCase().includes(trimmed)
-      );
+      // Match host eq
+      if (/\bhttp\.host\s+eq\b/.test(trimmed)) {
+        const host = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
+        return event.clientRequestHTTPHost.toLowerCase() === host.toLowerCase();
+      }
+
+      return false;
     });
   });
 }
@@ -123,11 +142,11 @@ export function previewRuleImpact(
   const sampleInterval = planInfo.defaultSampleRate;
   const isSampled = sampleInterval > 1;
 
-  // Filter events belonging to this zone or universal simulation pool
+  // Filter events belonging to this zone
   const zoneEvents = historicalEvents.filter(
     (e) => e.zoneId === zone.id || e.zoneName === zone.name
   );
-  const samplePool = zoneEvents.length > 0 ? zoneEvents : historicalEvents;
+  const samplePool = zoneEvents;
 
   // Evaluate matches
   const matchedEvents = samplePool.filter((evt) =>
@@ -164,7 +183,7 @@ export function previewRuleImpact(
     cleanMatches.length * sampleInterval * windowMultiplier
   );
   const falsePositiveRatio =
-    samplePool.length > 0 ? cleanMatches.length / samplePool.length : 0;
+    matchedEvents.length > 0 ? cleanMatches.length / matchedEvents.length : 0;
 
   let fpRisk: 'Low' | 'Moderate' | 'High' = 'Low';
   if (falsePositiveRatio > 0.05) fpRisk = 'High';

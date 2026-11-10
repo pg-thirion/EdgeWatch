@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   X,
-  ShieldAlert,
   Sliders,
   CheckCircle2,
   AlertTriangle,
@@ -10,7 +9,6 @@ import {
   Lock,
   Info,
   Check,
-  ChevronRight,
 } from 'lucide-react';
 import {
   WafEvent,
@@ -18,6 +16,7 @@ import {
   CloudflareZone,
   WafAction,
   RulePreviewEstimate,
+  PLAN_LIMITS,
 } from '../types/security';
 import { previewRuleImpact } from '../services/rulePreviewEngine';
 
@@ -52,7 +51,7 @@ export const RuleWorkflowModal: React.FC<RuleWorkflowModalProps> = ({
       ? `Mitigate Suspicious Traffic on ${initialEvent.clientRequestPath}`
       : 'Block Suspicious High Threat Request Patterns'
   );
-  const [description, setDescription] = useState<string>(
+  const [description] = useState<string>(
     initialEvent
       ? `Automated mitigation proposed from incident on IP ${initialEvent.clientIP}`
       : 'Block high threat requests hitting sensitive endpoints'
@@ -168,26 +167,26 @@ export const RuleWorkflowModal: React.FC<RuleWorkflowModalProps> = ({
                 <span className="text-zinc-400">Custom WAF Rules Quota:</span>
                 <span className="font-mono font-medium text-zinc-200">
                   {selectedZone.currentCustomRulesCount} /{' '}
-                  {selectedZone.plan === 'free'
-                    ? 5
-                    : selectedZone.plan === 'pro'
-                    ? 20
-                    : selectedZone.plan === 'business'
-                    ? 50
-                    : 1000}{' '}
-                  rules used
+                  {PLAN_LIMITS[selectedZone.plan].maxCustomRules} rules used
                 </span>
               </div>
             </div>
 
-            {selectedZone.plan === 'free' && selectedZone.currentCustomRulesCount >= 4 && (
+            {selectedZone.currentCustomRulesCount >= PLAN_LIMITS[selectedZone.plan].maxCustomRules ? (
+              <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>
+                  <strong>Plan Quota Exceeded:</strong> {selectedZone.plan.toUpperCase()} plan allows maximum {PLAN_LIMITS[selectedZone.plan].maxCustomRules} custom rules.
+                </span>
+              </div>
+            ) : selectedZone.currentCustomRulesCount >= PLAN_LIMITS[selectedZone.plan].maxCustomRules - 1 ? (
               <div className="flex items-center gap-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
-                  <strong>Near Plan Quota:</strong> Free plan allows maximum 5 custom rules. Only 1 rule slot remains.
+                  <strong>Near Plan Quota:</strong> {selectedZone.plan.toUpperCase()} plan allows maximum {PLAN_LIMITS[selectedZone.plan].maxCustomRules} custom rules. Only 1 rule slot remains.
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Step 2: Rule Metadata & Expression */}
@@ -419,14 +418,14 @@ export const RuleWorkflowModal: React.FC<RuleWorkflowModalProps> = ({
               Cancel
             </button>
 
-            {/* STRICTLY GATED APPLY BUTTON: Disabled until Preview is run AND checkbox is checked! */}
+            {/* STRICTLY GATED APPLY BUTTON: Disabled until Preview is run AND checkbox is checked AND quota not exceeded! */}
             <button
               id="btn-apply-waf-rule"
               type="button"
               onClick={handleApply}
-              disabled={!hasUserApproved || !previewResult || appliedSuccess}
+              disabled={!hasUserApproved || !previewResult || appliedSuccess || previewResult.planLimitExceeded}
               className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition ${
-                hasUserApproved && previewResult && !appliedSuccess
+                hasUserApproved && previewResult && !appliedSuccess && !previewResult.planLimitExceeded
                   ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-md'
                   : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
               }`}

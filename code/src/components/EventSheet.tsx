@@ -11,7 +11,6 @@ import {
   Search,
   PlusCircle,
   Download,
-  ExternalLink,
 } from 'lucide-react';
 import { WafEvent } from '../types/security';
 
@@ -221,7 +220,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
             </div>
 
             <div className="bg-[#121215] rounded border border-zinc-800 p-2 text-xs font-mono space-y-1 max-h-40 overflow-y-auto">
-              {Object.entries(event.clientRequestHeaders).map(([key, val]) => (
+              {Object.entries(event.clientRequestHeaders || {}).map(([key, val]) => (
                 <div key={key} className="flex gap-2">
                   <span className="text-zinc-400 select-all">{key}:</span>
                   <span className="text-zinc-200 select-all break-all">{val}</span>

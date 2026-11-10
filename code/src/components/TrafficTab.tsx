@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import {
-  Globe,
-  Filter,
   Search,
   Fingerprint,
-  Server,
-  Layers,
-  ShieldAlert,
-  ArrowUpRight,
-  ExternalLink,
 } from 'lucide-react';
 import { WafEvent, CloudflareZone } from '../types/security';
 
@@ -16,7 +9,7 @@ interface TrafficTabProps {
   events: WafEvent[];
   zones: CloudflareZone[];
   onInvestigateIp: (ip: string) => void;
-  onInspectEvent: (event: WafEvent) => void;
+  onInspectEvent?: (event: WafEvent) => void;
   onProposeRuleForPath: (path: string) => void;
 }
 
@@ -24,7 +17,7 @@ export const TrafficTab: React.FC<TrafficTabProps> = ({
   events,
   zones,
   onInvestigateIp,
-  onInspectEvent,
+  onInspectEvent: _onInspectEvent,
   onProposeRuleForPath,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');

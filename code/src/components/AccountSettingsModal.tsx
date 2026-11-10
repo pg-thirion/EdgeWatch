@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import {
   X,
   Key,
-  ShieldCheck,
   Plus,
   Trash2,
   Check,
   AlertCircle,
   Lock,
-  Layers,
 } from 'lucide-react';
 import { CloudflareAccount, CloudflareZone } from '../types/security';
 

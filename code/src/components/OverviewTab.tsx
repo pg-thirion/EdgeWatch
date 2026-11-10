@@ -1,16 +1,8 @@
 import React from 'react';
 import {
-  ShieldAlert,
-  ShieldCheck,
   AlertTriangle,
-  FileCode,
-  Terminal,
-  Activity,
-  Layers,
   Search,
   PlusCircle,
-  ExternalLink,
-  ChevronRight,
   TrendingUp,
 } from 'lucide-react';
 import {
@@ -27,6 +19,7 @@ interface OverviewTabProps {
   events: WafEvent[];
   rules: WafRule[];
   zones: CloudflareZone[];
+  selectedZoneId: string;
   anomalies: SpikeAnomaly[];
   trafficData: TrafficDataPoint[];
   selectedRange: string;
@@ -43,6 +36,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   events,
   rules,
   zones,
+  selectedZoneId,
   anomalies,
   trafficData,
   selectedRange,
@@ -54,21 +48,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onProposeRuleFromEvent,
   onProposeNewRule,
 }) => {
-  // Aggregate KPI stats
-  const totalRequests = trafficData.reduce((acc, curr) => acc + curr.total, 0) || events.length * 5;
-  const totalDenied = trafficData.reduce((acc, curr) => acc + curr.denied, 0) || events.filter((e) => e.action === 'block').length * 5;
-  const totalChallenged = trafficData.reduce((acc, curr) => acc + curr.challenged, 0) || events.filter((e) => e.action === 'challenge' || e.action === 'managed_challenge').length * 5;
-  const totalLogged = trafficData.reduce((acc, curr) => acc + curr.logged, 0) || events.filter((e) => e.action === 'log').length * 5;
-  const totalRateLimited = trafficData.reduce((acc, curr) => acc + curr.rateLimited, 0) || events.filter((e) => e.action === 'rate_limit').length * 5;
+  const activeZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
+
+  // Filter events by selected zone
+  const zoneEvents = selectedZoneId
+    ? events.filter((e) => e.zoneId === selectedZoneId)
+    : events;
 
   // Filter events if country selected
   const displayEvents = selectedCountry
-    ? events.filter((e) => e.clientCountry.toUpperCase() === selectedCountry.toUpperCase())
-    : events;
+    ? zoneEvents.filter((e) => e.clientCountry.toUpperCase() === selectedCountry.toUpperCase())
+    : zoneEvents;
+
+  // Filter zone rules and anomalies
+  const displayRules = selectedZoneId
+    ? rules.filter((r) => r.zoneId === selectedZoneId)
+    : rules;
+  const displayAnomalies = selectedZoneId
+    ? anomalies.filter((a) => a.zoneId === selectedZoneId)
+    : anomalies;
+
+  // Aggregate KPI stats from actual zone events
+  const totalDenied = displayEvents.filter((e) => e.action === 'block').reduce((acc, curr) => acc + (curr.sampleInterval || 5), 0);
+  const totalChallenged = displayEvents.filter((e) => e.action === 'challenge' || e.action === 'managed_challenge' || e.action === 'js_challenge').reduce((acc, curr) => acc + (curr.sampleInterval || 5), 0);
+  const totalLogged = displayEvents.filter((e) => e.action === 'log').reduce((acc, curr) => acc + (curr.sampleInterval || 5), 0);
+  const totalRateLimited = displayEvents.filter((e) => e.action === 'rate_limit').reduce((acc, curr) => acc + (curr.sampleInterval || 5), 0);
+  const totalAllowed = displayEvents.filter((e) => e.action === 'allow').reduce((acc, curr) => acc + (curr.sampleInterval || 5), 0);
+  const totalRequests = totalAllowed + totalDenied + totalChallenged + totalLogged + totalRateLimited || displayEvents.length * 5;
 
   // Aggregate Top Denied IPs
   const ipCounts: Record<string, { count: number; blocked: number; event: WafEvent }> = {};
-  events.forEach((e) => {
+  displayEvents.forEach((e) => {
     if (!ipCounts[e.clientIP]) {
       ipCounts[e.clientIP] = { count: 0, blocked: 0, event: e };
     }
@@ -89,9 +99,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Active Anomaly Alerts (Request Spikes & Repeated Challenge Failures) */}
-      {anomalies.filter((a) => a.status === 'active').length > 0 && (
+      {displayAnomalies.filter((a) => a.status === 'active').length > 0 && (
         <div className="space-y-2.5">
-          {anomalies
+          {displayAnomalies
             .filter((a) => a.status === 'active')
             .map((anom) => (
               <div
@@ -198,12 +208,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         data={trafficData}
         selectedRange={selectedRange}
         onRangeChange={onRangeChange}
-        sampleRate={zones[0]?.plan === 'enterprise' ? 1 : 5}
+        sampleRate={activeZone.plan === 'enterprise' ? 1 : activeZone.plan === 'business' ? 2 : activeZone.plan === 'pro' ? 5 : 10}
       />
 
       {/* Interactive Threat-Origin World Map */}
       <ThreatWorldMap
-        events={events}
+        events={displayEvents}
         selectedCountry={selectedCountry}
         onSelectCountry={onSelectCountry}
       />
@@ -289,7 +299,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {rules.slice(0, 5).map((rule) => (
+              {(displayRules.length > 0 ? displayRules : rules).slice(0, 5).map((rule) => (
                 <div
                   key={rule.id}
                   className="p-3 bg-[#18181c] border border-zinc-800/80 rounded-lg hover:border-zinc-700 transition"
