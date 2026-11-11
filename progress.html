@@ -176,11 +176,46 @@
 
   <h2>Modules Breakdown & Critic Rounds</h2>
   
+  
   <div class="grid" id="modules-container">
     <div class="card" id="mod-1">
       <h3>1. Observability Dashboard & Analytics <span class="status-pill status-done">Won (84 vs 52)</span></h3>
       <p style="font-size: 13px; color: var(--muted);">KPI stat cards, stacked multi-action time-series charts, surge alerts with 1-click mitigation.</p>
       <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Critic Verdict: EdgeWatch won 84-52 vs Vercel benchmark.</div>
+    </div>
+    <div class="card" id="mod-2">
+      <h3>2. Threat-Origin World Map & Explorer <span class="status-pill status-done">Won (86 vs 65)</span></h3>
+      <p style="font-size: 13px; color: var(--muted);">Interactive SVG geo choropleth, origin pulse markers, JA4 fingerprints, multi-token triage filter.</p>
+      <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Critic Verdict: EdgeWatch won 86-65 vs Vercel benchmark.</div>
+    </div>
+    <div class="card" id="mod-3">
+      <h3>3. Event Detail Sheet & IP Lookup <span class="status-pill status-done">Won (96 vs 31)</span></h3>
+      <p style="font-size: 13px; color: var(--muted);">Ray ID, HTTP headers, JA4 TLS bot tags, Cloudflare phase, 1-click WAF proposal.</p>
+      <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Critic Verdict: EdgeWatch won 96-31 vs Vercel benchmark.</div>
+    </div>
+    <div class="card" id="mod-4">
+      <h3>4. Propose Rule, Preview & Safety Gate <span class="status-pill status-done">Verified E2E</span></h3>
+      <p style="font-size: 13px; color: var(--muted);">Wirefilter builder, 95% CI uncertainty intervals, strict 2-step approval gate, quota checks.</p>
+      <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Safety Proof: Browser test proved preview cannot apply rule without explicit approval.</div>
+    </div>
+    <div class="card" id="mod-5">
+      <h3>5. Demo Attacks & Reports <span class="status-pill status-done">Active</span></h3>
+      <p style="font-size: 13px; color: var(--muted);">4 realistic attack scenarios (Credential Stuffing, SQLi, L7 Flood, JA4 Botnet), PDF/CSV/JSON exports.</p>
+      <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Full simulation engine verified in browser tests.</div>
+    </div>
+    <div class="card" id="mod-6">
+      <h3>6. Browser E2E Tests <span class="status-pill status-done">All Passed (3/3)</span></h3>
+      <p style="font-size: 13px; color: var(--muted);">Full demo investigation workflow, preview safety gate, traffic explorer, and reports.</p>
+      <div class="bar-bg"><div class="bar-fill" style="width: 100%; background: #10b981;"></div></div>
+      <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Playwright Chromium E2E green (0 failures).</div>
+    </div>
+  </div>
+</div>
       <div style="font-size: 12px; margin-top: 8px; color: #34d399;">Critic Verdict: EdgeWatch won 84-52 vs Vercel benchmark.</div>
     </div>
     <div class="card" id="mod-2">
@@ -274,6 +309,15 @@
     [2026-11-10 07:59] Verified Cloudflare Ruleset phase http_request_firewall_custom & GraphQL firewallEventsAdaptive.<br>
     [2026-11-10 08:00] Initialized Vite React-TS project in code/ and configured task checklist.<br>
     [2026-11-10 08:01] Live progress dashboard established.<br>
+    [2026-11-10 08:13] Browser E2E test suite executed via Playwright Chromium.<br>
+    [2026-11-10 08:13] PASSED: Full Demo Investigation Workflow & Preview Safety Verification (5.1s).<br>
+    [2026-11-10 08:13] PASSED: Multi-Dimensional Traffic Explorer Tab (837ms).<br>
+    [2026-11-10 08:13] PASSED: Downloadable Reports Generation (331ms).<br>
+    [2026-11-10 08:14] Blind Critic round dispatched with labels stripped for Overview, Traffic, and Event Sheet.<br>
+    [2026-11-10 08:15] Blind Critic Verdict 1: EdgeWatch WINS Overview (84 vs 52).<br>
+    [2026-11-10 08:15] Blind Critic Verdict 2: EdgeWatch WINS Traffic Explorer (86 vs 65).<br>
+    [2026-11-10 08:15] Blind Critic Verdict 3: EdgeWatch WINS Event Telemetry Sheet (96 vs 31).<br>
+
     [2026-11-10 08:13] Browser E2E test suite executed via Playwright Chromium.<br>
     [2026-11-10 08:13] PASSED: Full Demo Investigation Workflow & Preview Safety Verification (5.1s).<br>
     [2026-11-10 08:13] PASSED: Multi-Dimensional Traffic Explorer Tab (837ms).<br>

@@ -23,17 +23,25 @@ export const IpInvestigationModal: React.FC<IpInvestigationModalProps> = ({
 }) => {
   // Aggregate IP intelligence from historical events
   const ipEvents = historicalEvents.filter((e) => e.clientIP === ip);
-  const sampleEvent = ipEvents[0] || historicalEvents[0];
+  const sampleEvent = ipEvents[0] || null;
 
-  const totalRequests = ipEvents.length * (sampleEvent?.sampleInterval || 5);
-  const blockedCount = ipEvents.filter((e) => e.action === 'block').length * (sampleEvent?.sampleInterval || 5);
-  const challengeFailures = ipEvents.filter((e) => e.action === 'challenge' || e.action === 'managed_challenge').length * (sampleEvent?.sampleInterval || 5);
+  const sampleInterval = sampleEvent ? (sampleEvent.sampleInterval || 5) : 1;
+  const totalRequests = ipEvents.length * sampleInterval;
+  const blockedCount = ipEvents.filter((e) => e.action === 'block').length * sampleInterval;
+  const challengeFailures = ipEvents.filter((e) => e.action === 'challenge' || e.action === 'managed_challenge').length * sampleInterval;
 
-  const threatScore = sampleEvent ? sampleEvent.threatScore : 85;
+  const threatScore = sampleEvent ? sampleEvent.threatScore : 0;
 
-  let reputation: 'Malicious' | 'Suspicious' | 'Neutral' | 'Clean' = 'Suspicious';
-  if (threatScore >= 80 || blockedCount > 50) reputation = 'Malicious';
-  else if (threatScore < 20 && blockedCount === 0) reputation = 'Clean';
+  let reputation: 'Malicious' | 'Suspicious' | 'Neutral' | 'Clean' = 'Neutral';
+  if (ipEvents.length === 0) {
+    reputation = 'Clean';
+  } else if (threatScore >= 80 || blockedCount > 50) {
+    reputation = 'Malicious';
+  } else if (threatScore >= 40 || blockedCount > 0 || challengeFailures > 0) {
+    reputation = 'Suspicious';
+  } else if (threatScore < 20 && blockedCount === 0) {
+    reputation = 'Clean';
+  }
 
   // Extract distinct user agents and JA4 fingerprints
   const userAgents = Array.from(new Set(ipEvents.map((e) => e.userAgent))).filter(Boolean);
@@ -83,8 +91,9 @@ export const IpInvestigationModal: React.FC<IpInvestigationModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
-                {sampleEvent?.clientCountryName} ({sampleEvent?.clientCountry}) • ASN:{' '}
-                {sampleEvent?.clientAsn} ({sampleEvent?.clientAsnName})
+                {sampleEvent
+                  ? `${sampleEvent.clientCountryName} (${sampleEvent.clientCountry}) • ASN: ${sampleEvent.clientAsn} (${sampleEvent.clientAsnName})`
+                  : 'No historical edge telemetry recorded for this IP address'}
               </p>
             </div>
           </div>

@@ -100,6 +100,49 @@ test.describe('Wirefilter Engine & Preview Safety Unit Tests', () => {
     ).toBe(true);
   });
 
+  test('respects boolean operator precedence with nested parentheses', () => {
+    // False AND (False OR True) should be FALSE
+    expect(
+      evaluateWirefilter(
+        'http.request.uri.path contains "/other" and (ip.src eq 1.1.1.1 or ip.geoip.country eq "ru")',
+        mockEvent
+      )
+    ).toBe(false);
+
+    // True AND (False OR True) should be TRUE
+    expect(
+      evaluateWirefilter(
+        'http.request.uri.path contains "/auth" and (ip.src eq 1.1.1.1 or ip.geoip.country eq "ru")',
+        mockEvent
+      )
+    ).toBe(true);
+
+    // Compound NOT logic
+    expect(
+      evaluateWirefilter(
+        'http.request.uri.path contains "/auth" and not ip.geoip.country eq "us"',
+        mockEvent
+      )
+    ).toBe(true);
+  });
+
+  test('handles string literals containing "or" or "and" without breaking clauses', () => {
+    // Literal with "or" should not be split into multiple tokens
+    expect(
+      evaluateWirefilter(
+        'http.user_agent contains "crawler or bot"',
+        mockEvent
+      )
+    ).toBe(false);
+
+    expect(
+      evaluateWirefilter(
+        'http.user_agent contains "requests or urllib" or http.user_agent contains "python-requests"',
+        mockEvent
+      )
+    ).toBe(true);
+  });
+
   test('unknown clauses return false instead of random substring matches', () => {
     expect(evaluateWirefilter('unknown.field eq "random_value"', mockEvent)).toBe(false);
     expect(evaluateWirefilter('', mockEvent)).toBe(false);
@@ -148,5 +191,24 @@ test.describe('Wirefilter Engine & Preview Safety Unit Tests', () => {
     );
     expect(estimate.rawSampledMatches).toBe(0);
     expect(estimate.estimatedAffectedRequests).toBe(0);
+  });
+
+  test('enforces plan quota limits when zone rules reach capacity', () => {
+    // Pro plan max is 20 custom rules
+    const fullZone: CloudflareZone = {
+      ...mockZone,
+      currentCustomRulesCount: 20,
+    };
+    const estimate = previewRuleImpact(
+      'ip.src in {198.51.100.44}',
+      'block',
+      fullZone,
+      [mockEvent],
+      24
+    );
+    expect(estimate.planLimitExceeded).toBe(true);
+    expect(estimate.remainingRuleSlots).toBe(0);
+    expect(estimate.currentRulesUsed).toBe(20);
+    expect(estimate.maxRulesAllowed).toBe(20);
   });
 });

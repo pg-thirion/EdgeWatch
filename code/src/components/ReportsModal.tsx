@@ -67,13 +67,16 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
       sanitizeCsvField(e.ruleName || ''),
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent([headers.join(','), ...rows.map((r) => r.join(','))].join('\n'));
+    const csvText = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', csvContent);
+    downloadAnchor.setAttribute('href', url);
     downloadAnchor.setAttribute('download', `edgewatch_security_events_${Date.now()}.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const exportJSON = () => {
@@ -92,13 +95,17 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
       activeWafRules: rules,
     };
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(reportData, null, 2));
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('href', url);
     downloadAnchor.setAttribute('download', `edgewatch_audit_report_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handlePrint = () => {
@@ -348,10 +355,10 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
               </div>
 
               <div className="bg-[#09090b] border border-zinc-800 rounded-lg p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto max-h-96">
-                <div>RayID,Timestamp,Zone,Action,ClientIP,Country,ASN,Method,Path,ThreatScore</div>
+                <div>RayID,Timestamp,Zone,Action,ClientIP,Country,ASN,Method,Path,ThreatScore,SampleInterval,RuleMatched</div>
                 {events.slice(0, 15).map((e) => (
                   <div key={e.id} className="text-zinc-400 truncate">
-                    {e.id},{e.timestamp},{e.zoneName},{e.action},{e.clientIP},{e.clientCountry},{e.clientAsn},{e.clientRequestHTTPMethod},{e.clientRequestPath},{e.threatScore}
+                    {e.id},{e.timestamp},{e.zoneName},{e.action},{e.clientIP},{e.clientCountry},{e.clientAsn},{e.clientRequestHTTPMethod},{e.clientRequestPath},{e.threatScore},1:{e.sampleInterval},{e.ruleName || 'None'}
                   </div>
                 ))}
                 {events.length > 15 && (

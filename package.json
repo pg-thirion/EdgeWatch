@@ -1,0 +1,12 @@
+{
+  "name": "edgewatch-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix code run dev",
+    "build": "npm --prefix code run build",
+    "lint": "npm --prefix code run lint",
+    "test": "npm --prefix code run test",
+    "preview": "npm --prefix code run preview"
+  }
+}

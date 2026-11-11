@@ -10,101 +10,259 @@ import {
  * Parses and evaluates Cloudflare Wirefilter expressions against WAF events.
  * Read-only mathematical calculation with uncertainty bounds for sampled data.
  */
+interface Token {
+  type: 'LPAREN' | 'RPAREN' | 'OR' | 'AND' | 'NOT' | 'CLAUSE';
+  value: string;
+}
+
+function tokenizeWirefilter(expr: string): Token[] {
+  const tokens: Token[] = [];
+  let i = 0;
+  const len = expr.length;
+
+  while (i < len) {
+    while (i < len && /\s/.test(expr[i])) i++;
+    if (i >= len) break;
+
+    const char = expr[i];
+
+    if (char === '(') {
+      tokens.push({ type: 'LPAREN', value: '(' });
+      i++;
+      continue;
+    }
+    if (char === ')') {
+      tokens.push({ type: 'RPAREN', value: ')' });
+      i++;
+      continue;
+    }
+
+    const rest = expr.slice(i);
+    const orMatch = rest.match(/^(?:or|\|\|)(?=\s|\(|\)|$)/i);
+    if (orMatch) {
+      tokens.push({ type: 'OR', value: 'or' });
+      i += orMatch[0].length;
+      continue;
+    }
+
+    const andMatch = rest.match(/^(?:and|&&)(?=\s|\(|\)|$)/i);
+    if (andMatch) {
+      tokens.push({ type: 'AND', value: 'and' });
+      i += andMatch[0].length;
+      continue;
+    }
+
+    const notMatch = rest.match(/^(?:not|!)(?=\s|\(|\)|$)/i);
+    if (notMatch) {
+      tokens.push({ type: 'NOT', value: 'not' });
+      i += notMatch[0].length;
+      continue;
+    }
+
+    let clause = '';
+    let inDoubleQuotes = false;
+    let inSingleQuotes = false;
+    let inBraces = false;
+
+    while (i < len) {
+      const c = expr[i];
+
+      if (c === '"' && !inSingleQuotes) {
+        inDoubleQuotes = !inDoubleQuotes;
+        clause += c;
+        i++;
+        continue;
+      }
+      if (c === "'" && !inDoubleQuotes) {
+        inSingleQuotes = !inSingleQuotes;
+        clause += c;
+        i++;
+        continue;
+      }
+      if (c === '{' && !inDoubleQuotes && !inSingleQuotes) {
+        inBraces = true;
+        clause += c;
+        i++;
+        continue;
+      }
+      if (c === '}' && !inDoubleQuotes && !inSingleQuotes) {
+        inBraces = false;
+        clause += c;
+        i++;
+        continue;
+      }
+
+      if (!inDoubleQuotes && !inSingleQuotes && !inBraces) {
+        if (c === '(' || c === ')') break;
+        const sub = expr.slice(i);
+        if (/^\s+(?:or|and|not|\|\||&&|!)(?=\s|\(|\)|$)/i.test(sub)) {
+          break;
+        }
+      }
+
+      clause += c;
+      i++;
+    }
+
+    const trimmed = clause.trim();
+    if (trimmed) {
+      tokens.push({ type: 'CLAUSE', value: trimmed });
+    }
+  }
+
+  return tokens;
+}
+
+function evaluateAtomicClause(clause: string, event: WafEvent): boolean {
+  const trimmed = clause.trim();
+  if (!trimmed) return true;
+
+  // Match path contains
+  if (trimmed.toLowerCase().includes('http.request.uri.path contains')) {
+    const val = extractQuotedValue(trimmed);
+    return event.clientRequestPath.toLowerCase().includes(val.toLowerCase());
+  }
+
+  // Match path eq / ==
+  if (/\bhttp\.request\.uri\.path\s+(?:eq|==)\b/i.test(trimmed)) {
+    const val = extractBareOrQuoted(trimmed.split(/\s+(?:eq|==)\s+/i)[1] || '');
+    return event.clientRequestPath.toLowerCase() === val.toLowerCase();
+  }
+
+  // Match IP in set: ip.src in {198.51.100.44}
+  if (trimmed.toLowerCase().includes('ip.src in')) {
+    const ips = extractSetValues(trimmed);
+    return ips.includes(event.clientIP.toLowerCase());
+  }
+
+  // Match IP eq / ==: ip.src eq 198.51.100.44
+  if (/\bip\.src\s+(?:eq|==)\b/i.test(trimmed)) {
+    const ip = extractBareOrQuoted(trimmed.split(/\s+(?:eq|==)\s+/i)[1] || '');
+    return event.clientIP.toLowerCase() === ip.toLowerCase();
+  }
+
+  // Match country in set: ip.geoip.country in {"ru" "cn"}
+  if (trimmed.toLowerCase().includes('ip.geoip.country in')) {
+    const countries = extractSetValues(trimmed);
+    return countries.includes(event.clientCountry.toLowerCase());
+  }
+
+  // Match country eq / ==: ip.geoip.country eq "ru"
+  if (/\bip\.geoip\.country\s+(?:eq|==)\b/i.test(trimmed)) {
+    const country = extractBareOrQuoted(trimmed.split(/\s+(?:eq|==)\s+/i)[1] || '');
+    return event.clientCountry.toLowerCase() === country.toLowerCase();
+  }
+
+  // Match threat score gt / >: cf.threat_score gt 40
+  if (/\bcf\.threat_score\s+(?:gt|>)\b/i.test(trimmed)) {
+    const score = parseInt(trimmed.split(/\s+(?:gt|>)\s+/i)[1]?.trim() || '', 10);
+    return !isNaN(score) && event.threatScore > score;
+  }
+
+  // Match threat score gte / >=: cf.threat_score gte 40
+  if (/\bcf\.threat_score\s+(?:gte|>=)\b/i.test(trimmed)) {
+    const score = parseInt(trimmed.split(/\s+(?:gte|>=)\s+/i)[1]?.trim() || '', 10);
+    return !isNaN(score) && event.threatScore >= score;
+  }
+
+  // Match threat score lt / <: cf.threat_score lt 40
+  if (/\bcf\.threat_score\s+(?:lt|<)\b/i.test(trimmed)) {
+    const score = parseInt(trimmed.split(/\s+(?:lt|<)\s+/i)[1]?.trim() || '', 10);
+    return !isNaN(score) && event.threatScore < score;
+  }
+
+  // Match threat score lte / <=: cf.threat_score lte 40
+  if (/\bcf\.threat_score\s+(?:lte|<=)\b/i.test(trimmed)) {
+    const score = parseInt(trimmed.split(/\s+(?:lte|<=)\s+/i)[1]?.trim() || '', 10);
+    return !isNaN(score) && event.threatScore <= score;
+  }
+
+  // Match query contains
+  if (trimmed.toLowerCase().includes('http.request.uri.query contains')) {
+    const val = extractQuotedValue(trimmed);
+    return event.clientRequestQuery.toLowerCase().includes(val.toLowerCase());
+  }
+
+  // Match user agent contains
+  if (trimmed.toLowerCase().includes('http.user_agent contains')) {
+    const val = extractQuotedValue(trimmed);
+    return event.userAgent.toLowerCase().includes(val.toLowerCase());
+  }
+
+  // Match method eq / ==
+  if (/\bhttp\.request\.method\s+(?:eq|==)\b/i.test(trimmed)) {
+    const method = extractBareOrQuoted(trimmed.split(/\s+(?:eq|==)\s+/i)[1] || '');
+    return event.clientRequestHTTPMethod.toLowerCase() === method.toLowerCase();
+  }
+
+  // Match host eq / ==
+  if (/\bhttp\.host\s+(?:eq|==)\b/i.test(trimmed)) {
+    const host = extractBareOrQuoted(trimmed.split(/\s+(?:eq|==)\s+/i)[1] || '');
+    return event.clientRequestHTTPHost.toLowerCase() === host.toLowerCase();
+  }
+
+  return false;
+}
+
 export function evaluateWirefilter(expression: string, event: WafEvent): boolean {
   if (!expression || !expression.trim()) return false;
-  const cleanExpr = expression.toLowerCase().trim();
+  const tokens = tokenizeWirefilter(expression.trim());
+  if (tokens.length === 0) return false;
 
-  // Tokenize by OR first, then AND
-  const orClauses = cleanExpr.split(/\sor\s+/);
+  let pos = 0;
 
-  return orClauses.some((orClause) => {
-    const andClauses = orClause.replace(/[()]/g, '').split(/\sand\s+/);
+  function parseOr(): boolean {
+    let result = parseAnd();
+    while (pos < tokens.length && tokens[pos].type === 'OR') {
+      pos++;
+      const nextAnd = parseAnd();
+      result = result || nextAnd;
+    }
+    return result;
+  }
 
-    return andClauses.every((clause) => {
-      const trimmed = clause.trim();
-      if (!trimmed) return true;
+  function parseAnd(): boolean {
+    let result = parseNot();
+    while (pos < tokens.length && tokens[pos].type === 'AND') {
+      pos++;
+      const nextNot = parseNot();
+      result = result && nextNot;
+    }
+    return result;
+  }
 
-      // Match path contains
-      if (trimmed.includes('http.request.uri.path contains')) {
-        const val = extractQuotedValue(trimmed);
-        return event.clientRequestPath.toLowerCase().includes(val.toLowerCase());
+  function parseNot(): boolean {
+    if (pos < tokens.length && tokens[pos].type === 'NOT') {
+      pos++;
+      return !parseNot();
+    }
+    return parsePrimary();
+  }
+
+  function parsePrimary(): boolean {
+    if (pos >= tokens.length) return false;
+    const token = tokens[pos];
+
+    if (token.type === 'LPAREN') {
+      pos++;
+      const res = parseOr();
+      if (pos < tokens.length && tokens[pos].type === 'RPAREN') {
+        pos++;
       }
+      return res;
+    }
 
-      // Match path eq
-      if (/\bhttp\.request\.uri\.path\s+eq\b/.test(trimmed)) {
-        const val = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
-        return event.clientRequestPath.toLowerCase() === val.toLowerCase();
-      }
+    if (token.type === 'CLAUSE') {
+      pos++;
+      return evaluateAtomicClause(token.value, event);
+    }
 
-      // Match IP in set: ip.src in {198.51.100.44}
-      if (trimmed.includes('ip.src in')) {
-        const ips = extractSetValues(trimmed);
-        return ips.includes(event.clientIP.toLowerCase());
-      }
+    // Unexpected token fallback
+    pos++;
+    return false;
+  }
 
-      // Match IP eq: ip.src eq 198.51.100.44
-      if (/\bip\.src\s+eq\b/.test(trimmed)) {
-        const ip = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
-        return event.clientIP.toLowerCase() === ip.toLowerCase();
-      }
-
-      // Match country in set: ip.geoip.country in {"ru" "cn"}
-      if (trimmed.includes('ip.geoip.country in')) {
-        const countries = extractSetValues(trimmed);
-        return countries.includes(event.clientCountry.toLowerCase());
-      }
-
-      // Match country eq: ip.geoip.country eq "ru"
-      if (/\bip\.geoip\.country\s+eq\b/.test(trimmed)) {
-        const country = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
-        return event.clientCountry.toLowerCase() === country.toLowerCase();
-      }
-
-      // Match threat score gt: cf.threat_score gt 40
-      if (/\bcf\.threat_score\s+gt\b/.test(trimmed)) {
-        const score = parseInt(trimmed.split(/\s+gt\s+/)[1]?.trim() || '', 10);
-        return !isNaN(score) && event.threatScore > score;
-      }
-
-      // Match threat score gte: cf.threat_score gte 40
-      if (/\bcf\.threat_score\s+gte\b/.test(trimmed)) {
-        const score = parseInt(trimmed.split(/\s+gte\s+/)[1]?.trim() || '', 10);
-        return !isNaN(score) && event.threatScore >= score;
-      }
-
-      // Match threat score lt: cf.threat_score lt 40
-      if (/\bcf\.threat_score\s+lt\b/.test(trimmed)) {
-        const score = parseInt(trimmed.split(/\s+lt\s+/)[1]?.trim() || '', 10);
-        return !isNaN(score) && event.threatScore < score;
-      }
-
-      // Match query contains
-      if (trimmed.includes('http.request.uri.query contains')) {
-        const val = extractQuotedValue(trimmed);
-        return event.clientRequestQuery.toLowerCase().includes(val.toLowerCase());
-      }
-
-      // Match user agent contains
-      if (trimmed.includes('http.user_agent contains')) {
-        const val = extractQuotedValue(trimmed);
-        return event.userAgent.toLowerCase().includes(val.toLowerCase());
-      }
-
-      // Match method eq
-      if (/\bhttp\.request\.method\s+eq\b/.test(trimmed)) {
-        const method = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
-        return event.clientRequestHTTPMethod.toLowerCase() === method.toLowerCase();
-      }
-
-      // Match host eq
-      if (/\bhttp\.host\s+eq\b/.test(trimmed)) {
-        const host = extractBareOrQuoted(trimmed.split(/\s+eq\s+/)[1] || '');
-        return event.clientRequestHTTPHost.toLowerCase() === host.toLowerCase();
-      }
-
-      return false;
-    });
-  });
+  return parseOr();
 }
 
 function extractQuotedValue(clause: string): string {
@@ -154,8 +312,19 @@ export function previewRuleImpact(
   );
   const rawSampledMatches = matchedEvents.length;
 
-  // Synthetic 24h multiplier scaling from recent sample pool (assuming pool is ~30 min window)
-  const windowMultiplier = Math.max(1, (windowHours * 60) / 30);
+  // Extrapolate to windowHours based on actual time span of events in pool (fallback: 30 min default)
+  let windowMultiplier = Math.max(1, (windowHours * 60) / 30);
+  if (samplePool.length >= 2) {
+    const times = samplePool
+      .map((e) => new Date(e.timestamp).getTime())
+      .filter((t) => !isNaN(t));
+    if (times.length >= 2) {
+      const spanMinutes = (Math.max(...times) - Math.min(...times)) / 60000;
+      if (spanMinutes >= 0.5) {
+        windowMultiplier = Math.max(1, (windowHours * 60) / spanMinutes);
+      }
+    }
+  }
   const estimatedMatches = Math.round(
     rawSampledMatches * sampleInterval * windowMultiplier
   );

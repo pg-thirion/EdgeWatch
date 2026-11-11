@@ -213,7 +213,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {/* Interactive Threat-Origin World Map */}
       <ThreatWorldMap
-        events={displayEvents}
+        events={zoneEvents}
         selectedCountry={selectedCountry}
         onSelectCountry={onSelectCountry}
       />
@@ -299,36 +299,42 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {(displayRules.length > 0 ? displayRules : rules).slice(0, 5).map((rule) => (
-                <div
-                  key={rule.id}
-                  className="p-3 bg-[#18181c] border border-zinc-800/80 rounded-lg hover:border-zinc-700 transition"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-xs text-zinc-200">{rule.name}</span>
-                    <span
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded font-mono ${
-                        rule.action === 'block'
-                          ? 'bg-red-500/15 text-red-400'
-                          : rule.action === 'challenge' || rule.action === 'managed_challenge'
-                          ? 'bg-amber-500/15 text-amber-400'
-                          : rule.action === 'rate_limit'
-                          ? 'bg-purple-500/15 text-purple-400'
-                          : 'bg-blue-500/15 text-blue-400'
-                      }`}
-                    >
-                      {rule.action}
-                    </span>
+              {displayRules.length > 0 ? (
+                displayRules.slice(0, 5).map((rule) => (
+                  <div
+                    key={rule.id}
+                    className="p-3 bg-[#18181c] border border-zinc-800/80 rounded-lg hover:border-zinc-700 transition"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-xs text-zinc-200">{rule.name}</span>
+                      <span
+                        className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded font-mono ${
+                          rule.action === 'block'
+                            ? 'bg-red-500/15 text-red-400'
+                            : rule.action === 'challenge' || rule.action === 'managed_challenge'
+                            ? 'bg-amber-500/15 text-amber-400'
+                            : rule.action === 'rate_limit'
+                            ? 'bg-purple-500/15 text-purple-400'
+                            : 'bg-blue-500/15 text-blue-400'
+                        }`}
+                      >
+                        {rule.action}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-zinc-400 truncate bg-[#121215] p-1.5 rounded border border-zinc-800/60 mb-1">
+                      {rule.expression}
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-zinc-500 font-mono">
+                      <span>24h matches: {rule.matchedCount24h.toLocaleString()}</span>
+                      <span>Status: {rule.enabled ? 'Active' : 'Disabled'}</span>
+                    </div>
                   </div>
-                  <div className="font-mono text-[11px] text-zinc-400 truncate bg-[#121215] p-1.5 rounded border border-zinc-800/60 mb-1">
-                    {rule.expression}
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] text-zinc-500 font-mono">
-                    <span>24h matches: {rule.matchedCount24h.toLocaleString()}</span>
-                    <span>Status: {rule.enabled ? 'Active' : 'Disabled'}</span>
-                  </div>
+                ))
+              ) : (
+                <div className="p-4 bg-[#18181c] border border-zinc-800/80 rounded-lg text-xs text-zinc-500 text-center">
+                  No custom WAF rules configured for this zone.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

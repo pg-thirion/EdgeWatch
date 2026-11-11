@@ -9,7 +9,6 @@ interface TrafficTabProps {
   events: WafEvent[];
   zones: CloudflareZone[];
   onInvestigateIp: (ip: string) => void;
-  onInspectEvent?: (event: WafEvent) => void;
   onProposeRuleForPath: (path: string) => void;
 }
 
@@ -17,7 +16,6 @@ export const TrafficTab: React.FC<TrafficTabProps> = ({
   events,
   zones,
   onInvestigateIp,
-  onInspectEvent: _onInspectEvent,
   onProposeRuleForPath,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
